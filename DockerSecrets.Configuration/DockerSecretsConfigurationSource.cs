@@ -21,7 +21,7 @@ namespace DockerSecrets.Configuration
         /// The delimiter separating the namespace from the key in the file name.
         /// For example, if set to "$", a file named "Test$ApplicationSettings__EncryptionKey" is expected.
         /// </summary>
-        public string NamespaceDelimiter { get; set; } = "$";
+        public string NamespaceDelimiter { get; set; } = ".";
 
         /// <summary>
         /// The delimiter used within the remainder of the file name to generate configuration keys.

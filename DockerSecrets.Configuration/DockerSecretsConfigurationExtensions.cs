@@ -16,7 +16,7 @@ namespace DockerSecrets.Configuration
         public static IConfigurationBuilder AddDockerSecrets(this IConfigurationBuilder builder,
             string secretsPath = "/run/secrets",
             string expectedNamespace = "",
-            string namespaceDelimiter = "$",
+            string namespaceDelimiter = ".",
             string keyDelimiter = "__")
         {
             var source = new DockerSecretsConfigurationSource
