@@ -1,28 +1,35 @@
 # DockerSecrets.Configuration
 
-DockerSecrets.Configuration is a lightweight configuration provider that integrates Docker secrets seamlessly into your .NET applications. It leverages the [Microsoft.Extensions.Configuration](https://docs.microsoft.com/en-us/dotnet/core/extensions/configuration) framework to load secrets from a specified directory (by default `/run/secrets`) and transform them into hierarchical configuration keys. This is especially useful when running your application in a Dockerized environment.
+[![NuGet](https://img.shields.io/nuget/v/DockerSecrets.Configuration.svg)](https://www.nuget.org/packages/DockerSecrets.Configuration)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-[![NuGet](https://img.shields.io/nuget/v/DockerSecrets.Configuration)](https://www.nuget.org/packages/DockerSecrets.Configuration) 
+## Overview
+
+**DockerSecrets.Configuration** is a lightweight NuGet package that seamlessly integrates Docker secrets into your .NET configuration system. This provider reads secrets from a mounted Docker secrets directory (defaulting to `/run/secrets`), processes secret file names based on configurable namespaces and custom delimiters, and loads them as key-value pairs into your application configuration.
+
+The package supports filtering secrets by multiple namespaces and can optionally include secrets without a namespace, giving you complete control over how secrets are imported into your application.
 
 ## Table of Contents
 
 - [Features](#features)
 - [Installation](#installation)
 - [Usage](#usage)
-  - [ASP.NET Core Web Application](#aspnet-core-web-application)
-  - [Generic Host / Console Application](#generic-host--console-application)
-- [Configuration Options](#configuration-options)
-- [How It Works](#how-it-works)
+  - [Basic Example](#basic-example)
+  - [Using Multiple Namespaces](#using-multiple-namespaces)
+- [API Documentation](#api-documentation)
+  - [AddDockerSecrets Extension Method](#adddockersecrets-extension-method)
+  - [DockerSecretsConfigurationSource](#dockersecretsconfigurationsource)
+  - [DockerSecretsConfigurationProvider](#dockersecretsconfigurationprovider)
 - [Contributing](#contributing)
 - [License](#license)
+- [Additional Resources](#additional-resources)
 
 ## Features
 
-- **Docker Secrets Integration**: Load Docker secrets from a specified directory directly into your application configuration.
-- **Namespace Filtering**: Optionally filter secrets by a specified namespace to load only relevant secrets.
-- **Customizable Delimiters**: Easily define custom delimiters for namespace separation and key conversion.
-- **Simple Integration**: One-line extension method to add the secrets provider to your configuration pipeline.
-- **Verbose Logging**: Built-in console logging helps trace secret loading for easier debugging and monitoring.
+- **Docker Secrets Integration:** Load secrets directly from a mounted directory into your configuration.
+- **Namespace Filtering:** Filter secrets using one or multiple namespaces.
+- **Customizable Delimiters:** Configure namespace and key delimiters for flexible file naming conventions.
+- **Empty Namespace Inclusion:** Optionally include secrets that do not have a namespace.
 
 ## Installation
 
@@ -32,102 +39,131 @@ Install the package via the .NET CLI:
 dotnet add package DockerSecrets.Configuration
 ```
 
-Or via the NuGet Package Manager:
+Or via the Package Manager Console:
 
 ```powershell
 Install-Package DockerSecrets.Configuration
 ```
 
-For more details, check out the [NuGet page](https://www.nuget.org/packages/DockerSecrets.Configuration).
+For more details, visit the [NuGet package page](https://www.nuget.org/packages/DockerSecrets.Configuration).
 
 ## Usage
 
-### ASP.NET Core Web Application
+### Basic Example
 
-To integrate Docker secrets into an ASP.NET Core web application, modify your `Program.cs` as follows:
-
-```csharp
-var builder = WebApplication.CreateBuilder(args);
-
-// Add Docker secrets with an optional expected namespace filter.
-builder.Configuration.AddDockerSecrets(
-    expectedNamespace: "Namespace" // Replace "Namespace" with your desired namespace, or omit for no filtering.
-);
-
-var app = builder.Build();
-app.Run();
-```
-
-### Generic Host / Console Application
-
-For generic host or console applications, add the secrets provider during configuration setup:
+Add the Docker secrets configuration provider to your configuration builder. For instance, in your `Program.cs` or `Startup.cs`:
 
 ```csharp
-using Microsoft.Extensions.Hosting;
 using DockerSecrets.Configuration;
+using Microsoft.Extensions.Configuration;
+using System.IO;
 
-IHost host = Host.CreateDefaultBuilder(args)
-    .ConfigureAppConfiguration((context, config) =>
-    {
-        // Add Docker secrets with an optional expected namespace filter.
-        config.AddDockerSecrets(
-            expectedNamespace: "Namespace" // Replace with your desired namespace.
-        );
-    })
-    .Build();
+var builder = new ConfigurationBuilder()
+    .SetBasePath(Directory.GetCurrentDirectory())
+    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+    .AddDockerSecrets(); // Uses default parameters: secretsPath = "/run/secrets"
 
-host.Run();
+// Build the configuration
+var configuration = builder.Build();
+
+// Access a secret value (assuming a file named "ApplicationSettings__EncryptionKey")
+var encryptionKey = configuration["ApplicationSettings:EncryptionKey"];
 ```
 
-## Configuration Options
+### Using Multiple Namespaces
 
-When using the `AddDockerSecrets` extension method, you can customize the following parameters:
+You can filter secrets by specific namespaces and control whether to include secrets without a namespace:
 
-- **secretsPath**:  
-  The directory where Docker secrets are mounted.  
-  _Default_: `/run/secrets`
+```csharp
+using DockerSecrets.Configuration;
+using Microsoft.Extensions.Configuration;
+using System.IO;
 
-- **expectedNamespace**:  
-  If provided, only secrets that begin with this namespace (plus the delimiter) will be loaded.  
-  _Example_: `"Test"`
+var builder = new ConfigurationBuilder()
+    .SetBasePath(Directory.GetCurrentDirectory())
+    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+    .AddDockerSecrets(
+        secretsPath: "/run/secrets",
+        expectedNamespaces: new[] { "Test", "Production" },
+        namespaceDelimiter: ".",
+        keyDelimiter: "__",
+        includeEmptyNamespace: false);
 
-- **namespaceDelimiter**:  
-  The character used to separate the namespace from the remainder of the file name.  
-  _Default_: `"."`  
-  _Example_: With an expected namespace of `"Test"` and a delimiter `"."`, a valid secret file name would be `Test.ApplicationSettings__EncryptionKey`.
-
-- **keyDelimiter**:  
-  The delimiter within the file name that will be replaced with a colon (`:`) to form hierarchical configuration keys.  
-  _Default_: `"__"`  
-  _Example_: A file named `ApplicationSettings__EncryptionKey` will be loaded as `ApplicationSettings:EncryptionKey` in the configuration.
-
-## How It Works
-
-1. The `DockerSecretsConfigurationProvider` reads all files from the configured `secretsPath` directory.
-2. If an `expectedNamespace` is set, only secrets prefixed with that namespace will be loaded.
-3. The namespace (if present) is stripped, and the file name is transformed into a hierarchical configuration key using the `keyDelimiter`.
-4. The contents of the file become the value of the configuration key.
-
-For example, assuming the following files exist in `/run/secrets`:
-
-```
-/run/secrets/Test.Database__Password
-/run/secrets/Test.Api__Key
+var configuration = builder.Build();
 ```
 
-With `expectedNamespace` set to `"Test"` and `keyDelimiter` set to `"__"`, the resulting configuration keys will be:
+In this example, only secrets with file names beginning with `Test.` or `Production.` will be loaded, and secrets with no namespace will be excluded.
 
-```json
-{
-  "Database:Password": "mysecretpassword",
-  "Api:Key": "myapikey"
-}
+## API Documentation
+
+### AddDockerSecrets Extension Method
+
+```csharp
+public static IConfigurationBuilder AddDockerSecrets(
+    this IConfigurationBuilder builder,
+    string secretsPath = "/run/secrets",
+    IEnumerable<string> expectedNamespaces = null,
+    string namespaceDelimiter = ".",
+    string keyDelimiter = "__",
+    bool includeEmptyNamespace = false)
 ```
+
+**Parameters:**
+
+- **builder:** The configuration builder to which the provider is added.
+- **secretsPath:** The directory path where Docker secrets are mounted.
+- **expectedNamespaces:** A collection of namespaces to filter secrets. If `null` or empty, secrets without a namespace are automatically included.
+- **namespaceDelimiter:** The delimiter that separates the namespace from the key in a secret file name.
+- **keyDelimiter:** The delimiter used to transform the secret file name into a configuration key.
+- **includeEmptyNamespace:** Indicates whether to include secrets without a namespace. Defaults to `false` unless no namespaces are provided.
+
+### DockerSecretsConfigurationSource
+
+This class represents the configuration source for Docker secrets.
+
+**Properties:**
+
+- **SecretsPath:** The directory where Docker secrets are mounted (default: `/run/secrets`).
+- **ExpectedNamespaces:** A collection of namespaces used to filter which secrets to load.
+- **NamespaceDelimiter:** The delimiter that separates the namespace from the key in the secret file name.
+- **KeyDelimiter:** The delimiter used in the secret file name to construct the configuration key.
+- **IncludeEmptyNamespace:** Indicates whether secrets without a namespace should be included.
+
+**Method:**
+
+- **Build(IConfigurationBuilder builder):** Builds the `DockerSecretsConfigurationProvider` instance.
+
+### DockerSecretsConfigurationProvider
+
+This provider reads Docker secrets from the specified directory, converts secret file names into configuration keys using the provided delimiters, and loads the secrets into the configuration system.
+
+**Key Responsibilities:**
+
+- Reads all files from the configured secrets directory.
+- Parses file names to extract the namespace and key parts.
+- Replaces custom key delimiters with the standard configuration key delimiter (`:`).
+- Loads secrets based on the filtering rules defined in the configuration source.
 
 ## Contributing
 
-Contributions are welcome! Feel free to open issues or submit pull requests.
+Contributions are welcome! To contribute:
+
+1. **Fork** the repository.
+2. **Create a new branch** for your feature or bugfix.
+3. **Write tests** for your changes.
+4. **Submit a pull request** with detailed information about your changes.
+
+If you have any issues, suggestions, or improvements, please open an issue or submit a pull request on GitHub.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+## Additional Resources
+
+- [NuGet Package](https://www.nuget.org/packages/DockerSecrets.Configuration)
+- [GitHub Repository](https://github.com/your-username/DockerSecrets.Configuration) *(Replace with your actual repository URL)*
+
+---
+
+Happy coding! Enjoy secure and manageable configuration with **DockerSecrets.Configuration**.

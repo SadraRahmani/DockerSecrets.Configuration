@@ -1,40 +1,47 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using System.Collections.Generic;
+using Microsoft.Extensions.Configuration;
 
 namespace DockerSecrets.Configuration
 {
     /// <summary>
-    /// Configuration source for Docker secrets.
+    /// Represents the configuration source for Docker secrets.
     /// </summary>
     public class DockerSecretsConfigurationSource : IConfigurationSource
     {
         /// <summary>
-        /// The directory where Docker secrets are mounted.
+        /// Gets or sets the directory path where Docker secrets are mounted.
         /// </summary>
         public string SecretsPath { get; set; } = "/run/secrets";
 
         /// <summary>
-        /// The expected namespace for this application (e.g. "Test", "PaymentWallet", etc.).
-        /// Only secrets with this namespace will be loaded.
+        /// Gets or sets a collection of namespaces to filter which secrets should be loaded.
+        /// Only secrets whose file names begin with one of these namespaces (separated by the <see cref="NamespaceDelimiter"/>) are loaded.
         /// </summary>
-        public string ExpectedNamespace { get; set; } = "";
+        public IList<string> ExpectedNamespaces { get; set; } = new List<string>();
 
         /// <summary>
-        /// The delimiter separating the namespace from the key in the file name.
-        /// For example, if set to "$", a file named "Test$ApplicationSettings__EncryptionKey" is expected.
+        /// Gets or sets the delimiter that separates the namespace from the key in a secret file name.
+        /// For example, with a delimiter of ".", a secret named "Test.ApplicationSettings__EncryptionKey" uses "Test" as the namespace.
         /// </summary>
         public string NamespaceDelimiter { get; set; } = ".";
 
         /// <summary>
-        /// The delimiter used within the remainder of the file name to generate configuration keys.
-        /// For example, "ApplicationSettings__EncryptionKey" becomes "ApplicationSettings:EncryptionKey".
+        /// Gets or sets the delimiter used within the remainder of the secret file name to construct the configuration key.
+        /// For example, "ApplicationSettings__EncryptionKey" is transformed into "ApplicationSettings:EncryptionKey".
         /// </summary>
         public string KeyDelimiter { get; set; } = "__";
 
         /// <summary>
-        /// Builds the Docker secrets configuration provider.
+        /// Gets or sets a value indicating whether secrets without a namespace should be included.
+        /// Defaults to <c>false</c>, unless no expected namespaces are provided (then it is set to <c>true</c>).
         /// </summary>
-        /// <param name="builder"></param>
-        /// <returns></returns>
+        public bool IncludeEmptyNamespace { get; set; } = false;
+
+        /// <summary>
+        /// Builds the <see cref="DockerSecretsConfigurationProvider"/> based on this source.
+        /// </summary>
+        /// <param name="builder">The configuration builder.</param>
+        /// <returns>An instance of <see cref="DockerSecretsConfigurationProvider"/>.</returns>
         public IConfigurationProvider Build(IConfigurationBuilder builder)
         {
             return new DockerSecretsConfigurationProvider(this);
