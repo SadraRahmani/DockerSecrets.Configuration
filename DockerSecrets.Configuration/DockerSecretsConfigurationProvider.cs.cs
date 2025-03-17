@@ -4,15 +4,27 @@ using Microsoft.Extensions.Configuration;
 
 namespace DockerSecrets.Configuration
 {
+    /// <summary>
+    /// Configuration provider for Docker secrets.
+    /// </summary>
     public class DockerSecretsConfigurationProvider : ConfigurationProvider
     {
         private readonly DockerSecretsConfigurationSource _source;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DockerSecretsConfigurationProvider"/> class.
+        /// </summary>
+        /// <param name="source">
+        /// The configuration source.
+        /// </param>
         public DockerSecretsConfigurationProvider(DockerSecretsConfigurationSource source)
         {
             _source = source;
         }
 
+        /// <summary>
+        /// Loads the Docker secrets into the configuration data.
+        /// </summary>
         public override void Load()
         {
             Console.WriteLine($"[DockerSecrets] Starting to load secrets from '{_source.SecretsPath}'...");

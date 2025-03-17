@@ -2,6 +2,9 @@
 
 namespace DockerSecrets.Configuration
 {
+    /// <summary>
+    /// Extension methods for adding the Docker secrets configuration provider to the configuration builder.
+    /// </summary>
     public static class DockerSecretsConfigurationExtensions
     {
         /// <summary>

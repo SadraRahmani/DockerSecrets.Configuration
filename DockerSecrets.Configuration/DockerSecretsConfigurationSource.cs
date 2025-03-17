@@ -3,6 +3,9 @@ using Microsoft.Extensions.Configuration;
 
 namespace DockerSecrets.Configuration
 {
+    /// <summary>
+    /// Configuration source for Docker secrets.
+    /// </summary>
     public class DockerSecretsConfigurationSource : IConfigurationSource
     {
         /// <summary>
