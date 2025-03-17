@@ -31,6 +31,11 @@ namespace DockerSecrets.Configuration
         /// </summary>
         public string KeyDelimiter { get; set; } = "__";
 
+        /// <summary>
+        /// Builds the Docker secrets configuration provider.
+        /// </summary>
+        /// <param name="builder"></param>
+        /// <returns></returns>
         public IConfigurationProvider Build(IConfigurationBuilder builder)
         {
             return new DockerSecretsConfigurationProvider(this);
