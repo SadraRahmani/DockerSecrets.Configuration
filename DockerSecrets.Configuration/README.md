@@ -162,7 +162,6 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 ## Additional Resources
 
 - [NuGet Package](https://www.nuget.org/packages/DockerSecrets.Configuration)
-- [GitHub Repository](https://github.com/your-username/DockerSecrets.Configuration) *(Replace with your actual repository URL)*
 
 ---
 
